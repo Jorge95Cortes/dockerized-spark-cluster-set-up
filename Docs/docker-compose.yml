@@ -1,0 +1,47 @@
+version: "3.8"
+
+networks:
+  spark-c-net:
+    external: true
+
+services:
+  spark-master:
+    image: bitnami/spark:latest
+    environment:
+      - SPARK_MODE=master
+      - SPARK_EXTRA_CLASSPATH=/opt/hadoop/share/hadoop/tools/lib/*:/opt/hadoop/share/hadoop/common/lib/*:/opt/hadoop/share/hadoop/common/*:/opt/hadoop/share/hadoop/hdfs/*:/opt/hadoop/share/hadoop/hdfs/lib/*
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    deploy:
+      placement:
+        constraints:
+          - node.labels.spark-role == master
+    networks:
+      - spark-c-net
+    volumes:
+      - hadoop-config:/opt/hadoop/etc/hadoop
+    depends_on:
+      - namenode
+  spark-worker:
+    image: bitnami/spark:latest
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_EXTRA_CLASSPATH=/opt/hadoop/share/hadoop/tools/lib/*:/opt/hadoop/share/hadoop/common/lib/*:/opt/hadoop/share/hadoop/common/*:/opt/hadoop/share/hadoop/hdfs/*:/opt/hadoop/share/hadoop/hdfs/lib/*
+    ports:
+      - "8081:8081"
+    depends_on:
+      - spark-master
+      - namenode
+    networks:
+      - spark-c-net
+    volumes:
+      - hadoop-config:/opt/hadoop/etc/hadoop
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.labels.spark-role == worker
+  namenode:
+  
