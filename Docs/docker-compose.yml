@@ -1,47 +1,138 @@
-version: "3.8"
-
-networks:
-  spark-c-net:
-    external: true
+version: '3.8'
 
 services:
+  namenode:
+    image: apache/hadoop:3.4.1
+    hostname: namenode
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+#      - HDFS_NAMENODE_OPTS=-Xmx4g -XX:+UseG1GC
+    volumes:
+      - namenode_data:/opt/hadoop/data/nameNode
+    configs:
+      - source: core_site_config
+        target: /opt/hadoop/etc/hadoop/core-site.xml
+      - source: hdfs_site_config
+        target: /opt/hadoop/etc/hadoop/hdfs-site.xml
+      - source: start_hdfs_script
+        target: /start-hdfs.sh
+        mode: 0755
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    command: ["/bin/bash", "/start-hdfs.sh"]
+    deploy:
+      mode: replicated 
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    networks:
+      - hadoop_spark_net
+
+  datanode:
+    image: apache/hadoop:3.4.1
+    hostname: "datanode-high-{{.Node.Hostname}}"
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - NODE_HOSTNAME={{.Node.Hostname}}
+#      - HADOOP_DATANODE_OPTS=-Xmx6g -XX:+UseG1GC
+      - NODE_PROFILE=high
+    volumes:
+      - type: bind
+        source: /data/hadoop
+        target: /opt/hadoop/data/dataNode
+    configs:
+      - source: core_site_config
+        target: /opt/hadoop/etc/hadoop/core-site.xml
+      - source: hdfs_site_config
+        target: /opt/hadoop/etc/hadoop/hdfs-site.xml
+      - source: datanode_script
+        target: /init-datanode.sh
+        mode: 0755
+    depends_on:
+      - namenode
+    command: ["/bin/bash", "/init-datanode.sh"]
+    deploy:
+      mode: replicated
+      replicas: 2
+      placement:
+        constraints:
+          - node.labels.h-role == worker
+    networks:
+      - hadoop_spark_net
+
   spark-master:
     image: bitnami/spark:latest
+    hostname: spark-master
+    user: root  # Run Spark as root
     environment:
       - SPARK_MODE=master
-      - SPARK_EXTRA_CLASSPATH=/opt/hadoop/share/hadoop/tools/lib/*:/opt/hadoop/share/hadoop/common/lib/*:/opt/hadoop/share/hadoop/common/*:/opt/hadoop/share/hadoop/hdfs/*:/opt/hadoop/share/hadoop/hdfs/lib/*
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_LOCAL_IP=0.0.0.0
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+      - SPARK_DRIVER_HOST=spark-master
+      - SPARK_DRIVER_BIND_ADDRESS=0.0.0.0
+      - SPARK_USER=root  # Tell Spark to use root identity
     ports:
       - "8080:8080"
       - "7077:7077"
+    configs:
+      - source: core_site_config
+        target: /opt/hadoop/etc/hadoop/core-site.xml
+      - source: hdfs_site_config
+        target: /opt/hadoop/etc/hadoop/hdfs-site.xml
+      - source: spark_start_script
+        target: /opt/bitnami/scripts/spark-start.sh
+        mode: 0755
     deploy:
+      mode: global
       placement:
         constraints:
           - node.labels.spark-role == master
     networks:
-      - spark-c-net
-    volumes:
-      - hadoop-config:/opt/hadoop/etc/hadoop
-    depends_on:
-      - namenode
+      - hadoop_spark_net
+
   spark-worker:
     image: bitnami/spark:latest
+    hostname: "spark-worker-high-{{.Node.Hostname}}"
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_EXTRA_CLASSPATH=/opt/hadoop/share/hadoop/tools/lib/*:/opt/hadoop/share/hadoop/common/lib/*:/opt/hadoop/share/hadoop/common/*:/opt/hadoop/share/hadoop/hdfs/*:/opt/hadoop/share/hadoop/hdfs/lib/*
-    ports:
-      - "8081:8081"
-    depends_on:
-      - spark-master
-      - namenode
-    networks:
-      - spark-c-net
-    volumes:
-      - hadoop-config:/opt/hadoop/etc/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    configs:
+      - source: core_site_config
+        target: /opt/hadoop/etc/hadoop/core-site.xml
+      - source: hdfs_site_config
+        target: /opt/hadoop/etc/hadoop/hdfs-site.xml
     deploy:
+      mode: replicated
       replicas: 2
       placement:
         constraints:
           - node.labels.spark-role == worker
-  namenode:
+    networks:
+      - hadoop_spark_net
+
+
+networks:
+  hadoop_spark_net:
+    external: true
   
+volumes:
+  namenode_data:
+    driver: local
+
+configs:
+  core_site_config:
+    file: ./hadoop-config/core-site.xml
+  hdfs_site_config:
+    file: ./hadoop-config/hdfs-site.xml
+  start_hdfs_script:
+    file: ./start-hdfs.sh
+  datanode_script:
+    file: ./init-datanode.sh
+  spark_start_script:
+    file: ./spark-start.sh

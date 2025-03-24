@@ -1,0 +1,44 @@
+#Compose used to create a test spark cluster with 1 master and 2 workers
+#Used for testing purposes
+
+version: "3.8"
+
+networks:
+  spark-c-net:
+    external: true
+
+services:
+  spark-master:
+    image: bitnami/spark:latest
+    hostname: spark-master
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_LOCAL_IP=spark-master
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    deploy:
+      placement:
+        constraints:
+          - node.labels.spark-role == master
+    networks:
+      spark-c-net:
+        aliases:
+          - spark-master
+
+  spark-worker:
+    image: bitnami/spark:latest
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    ports:
+      - "8081:8081"
+    networks:
+      - spark-c-net
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.labels.spark-role == worker

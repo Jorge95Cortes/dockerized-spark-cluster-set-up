@@ -1,0 +1,82 @@
+# This is the compose used to build a simple hadoop cluster with 1 namenode and 2 datanodes
+#Used for testing purposes
+
+version: '3.8'
+
+services:
+  namenode:
+    image: apache/hadoop:3.4.1
+    hostname: namenode
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+    volumes:
+      - namenode_data:/opt/hadoop/data/nameNode
+    configs:
+      - source: core_site_config
+        target: /opt/hadoop/etc/hadoop/core-site.xml
+      - source: hdfs_site_config
+        target: /opt/hadoop/etc/hadoop/hdfs-site.xml
+      - source: start_hdfs_script
+        target: /start-hdfs.sh
+        mode: 0755
+    ports:
+      - "9870:9870"
+    command: [ "/bin/bash", "/start-hdfs.sh" ]
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+
+  datanode:
+    image: apache/hadoop:3.4.1
+    hostname: "datanode-{{.Node.Hostname}}"
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - NODE_ID={{.Node.ID}}
+    volumes:
+      - type: volume
+        source: datanode_{{.Node.ID}}_data
+        target: /opt/hadoop/data/dataNode
+      - type: volume
+        source: datanode_data
+        target: /opt/hadoop/data
+    configs:
+      - source: core_site_config
+        target: /opt/hadoop/etc/hadoop/core-site.xml
+      - source: hdfs_site_config
+        target: /opt/hadoop/etc/hadoop/hdfs-site.xml
+      - source: datanode_script
+        target: /init-datanode.sh
+        mode: 0755
+    depends_on:
+      - namenode
+    command: [ "/bin/bash", "/init-datanode.sh" ]
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role != manager  # Skip manager nodes (optional)
+
+configs:
+  core_site_config:
+    file: ./hadoop-config/core-site.xml
+  hdfs_site_config:
+    file: ./hadoop-config/hdfs-site.xml
+  start_hdfs_script:
+    file: ./start-hdfs.sh
+  datanode_script:
+    file: ./init-datanode.sh
+
+networks:
+  default:
+    driver: overlay
+
+volumes:
+  namenode_data:
+    driver: local
+  datanode_data:
+    driver: local

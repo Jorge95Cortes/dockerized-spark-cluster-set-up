@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>2</value>  <!-- Balance between redundancy and space efficiency -->
+    </property>
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>file:///opt/hadoop/data/nameNode</value>
+    </property>
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>file:///opt/hadoop/data/dataNode</value>
+    </property>
+    <property>
+        <name>dfs.blocksize</name>
+        <value>128m</value>  <!-- Larger blocks for large files -->
+    </property>
+    <property>
+        <name>dfs.namenode.handler.count</name>
+        <value>30</value>  <!-- More threads for high concurrency -->
+    </property>
+    <property>
+        <name>dfs.datanode.handler.count</name>
+        <value>20</value>
+    </property>
+    <property>
+        <name>dfs.namenode.datanode.registration.ip-hostname-check</name>
+        <value>false</value>  <!-- Disable datanode registration -->
+    </property>
+</configuration>

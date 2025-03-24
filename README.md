@@ -1,45 +1,27 @@
 # Target
-In this repo, I'll cover some of the steps I took to set up a Spark cluster with up to 20 nodes using Docker. One key point to note is that the cluster uses containers created on WSL for Windows as well as containers set up on a Linux machine. This documentation covers everything from installing the required software to making network adjustments and includes tests and reports along the way.
+In this repo, I'll cover some of the steps I took to set up a Spark cluster with up to 20 nodes using Docker. This documentation covers everything from installing the required software to making network adjustments and includes tests and reports along the way.
 First things first, let's get the software installed.
 # Software Installation
 ## Docker
 To install Docker on Debian, you can see the official documentation [here](https://docs.docker.com/engine/install/debian/). Based on my experience, I recommend using docker desktop as it is more intuitive and user-friendly, but you can just install the docker engine if you prefer or have limited resources, also this is what you're likely found on real work environments.
 
-To install Docker on Windows, you can use the following link: [Docker Desktop](https://www.docker.com/products/docker-desktop) (I suggest to see the next section before). It is important to note that Docker Desktop runs a Linux VM in the background, and you will need to enable WSL2 to run Linux containers.
-Also, it is recommended to install a Linux distribution on WSL2 to interact with the containers in a more efficient way. I'll be using Debian 12 for this documentation.
-So, let's start by installing WSL2 with Debian 12.
-## WSL2 (Only for those who don't want or can't use Linux)
-To install WSL2 on Windows, you can follow the official documentation [here](https://docs.microsoft.com/en-us/windows/wsl/install).
-A key point is that you need to have Windows 10 version 1903 (AKA Windows 10, for simplicity) or higher to install WSL2, is also required to have a machine capable of running virtualization.
-
-A simple guide to install WSL2 is as follows:
-```PowerShell
-# In PowerShell as Administrator
-wsl --install -d Debian
-```
-After the installation is complete, you can access the Debian terminal by typing `wsl` in the Windows terminal and it will ask you to set up a username and password.
-## Docker on WSL2
-It is preferable to not install Docker on WSL2 as it can cause issues with the Docker Desktop installation. Instead, you can use the Docker Desktop to manage the containers on WSL2.
-To do this, you need to enable the WSL2 integration in the Docker Desktop settings.
-1. Open Docker Desktop
-2. Go to Settings
-3. Go to Resources
-4. Go to WSL Integration
-5. Enable the integration for the WSL2 distribution you want to use
-6. Click Apply & Restart
-
-It should look like this:
-![WSL Integration](assets/WSL_resource_config.png)
-Keep in mind that the docker commands will only work on the WSL2 terminal if you have Docker Desktop running.
-
-## Network Configuration on WSL2
-To avoid issues with WSL networking, and based on my experience, it is recommended to switch the WSL2 network configuration from NAT to the Mirrored mode. This will replicate the interfaces from the Windows host to the WSL2 distribution, making it easier to access the containers from the Windows host.
-In order to do this, you will need to create a `.wslconfig` file in your user directory with the following content:
+To install Docker on Debian, you can use the following commands:
 ```bash
-[wsl2]
-networkingMode=mirrored
+# Update the apt package index and install packages to allow apt to use a repository over HTTPS:
+sudo apt-get update
+sudo apt-get install apt-transport-https ca-certificates curl gnupg lsb-release
+# Add Docker’s official GPG key:
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+# Use the following command to set up the stable repository. To add the nightly or test repository, add the word nightly or test (or both) after the word stable in the commands below. Learn about nightly and test channels.
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+# Update the apt package index, and install the latest version of Docker Engine and containerd, or go to the next step to install a specific version:
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io
 ```
-After creating the file, you will need to restart the WSL2 distribution if running. After that, you should be able to access the containers from the Windows host using the IP address of the WSL2 distribution.
+After installing Docker, you can start the Docker service with the following command:
+```bash
+sudo systemctl start docker
+```
 
 # Initial Containers test
 To test the Docker installation, you can run the following command:
@@ -48,23 +30,27 @@ docker run hello-world
 ```
 If everything is working correctly, you should see a message saying that the installation was successful.
 
-## Spark containers
+# Spark
 First, we need to create a container with the Spark image. To do this, is necessary to pull the image from the Docker Hub, there are different versions of the image, such as Spark, Apache/Spark, and Bitnami/Spark as the most popular ones. For this test I used the Spark official image, but the final choice is still not defined, which will be based on the researchs and tests that are being done by other teams and myself.
 To pull the image, you can use the following command:
 ```bash
 docker pull spark:latest
 ```
-This test is using the host network mode, which means that the container will use the host network interface. This is very likely to change in the future, but for now, it is a simple way to test the Spark container with a virtual machine and a WSL2 distribution.
+This test is using the host network mode, which means that the container will use the host network interface. This is very likely to change in the future, but for now, it is a simple way to test the Spark container with two virtual machines running on the same host, one with debian and the other with LUbuntu, and the host network mode allows the containers to communicate with each other without any additional configuration.
 We're going to create two containers, one for the master and one for the worker. The master container will be created with the following command:
 ```bash
 docker run -d   --name spark-master   --network=host -e SPARK_MASTER_HOST=<master-ip>   -e SPARK_MASTER_WEBUI_HOST=0.0.0.0   spark:latest   /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
 ```
-In this command, you need to replace `<master-ip>` with the IP address of your computer without the brackets. If you're using WSL2, you can find the IP address by running the following command:
+In this command, you need to replace `<master-ip>` with the IP address of your computer without the brackets. You have several ways to find the IP address of your computer, but one that doesn't require any additional software is to run the following command in the terminal:
 ```bash
-hostname -I
+ip route
 ```
-Which, due to the mirrored network configuration, will return the IP address of the Windows host.
-After running the command, you can access the Spark UI by going to `http://<master-ip>:8080` in your brovirwser. You should see the Spark master UI with no workers connected.
+This command will return the IP address of the computer in the `src` field of the output.
+Here is an example of the output:
+![IP Route](assets/Ip-route-output.png)
+
+
+After running the command, you can access the Spark UI by going to `http://<master-ip>:8080` in your browser. You should see the Spark master UI with no workers connected.
 It might look like this:
 ![Spark Master UI](assets/Spark-master-web-UI.png)
 Now, let's create the worker container. The worker container will be created with the following command:
@@ -89,7 +75,7 @@ Also, you will notice that the Spark UI will show the application in the "Comple
 It might look like this:
 ![Spark Pi Application](assets/Completed-app-web-UI.png)
 
-And that's the end of the initial test. Some of the next steps will include setting up a more complex network configuration, avoiding the use of the host network mode, creating a Docker Compose file to manage the containers and include more tools in the cluster such as Hadoop, Jupyter, or other tools that might be required for the project. Let me know if you have any questions or suggestions for this or the next steps.
+Up to this point, we have a working Spark cluster with a master and a worker node running on Docker containers. The next step is to scale the cluster to include more worker nodes and test the performance of the cluster with larger datasets and more complex applications.
 
 # Docker Swarm
 Docker Swarm is a container orchestration tool that allows you to manage a cluster of Docker nodes across multiple machines, as Docker Networks are limited to multiple containers on the same host, but we're looking to multiple containers on multiple hosts. Due to Docker Swarm being a built-in feature of Docker, it is not necessary to install any additional software to use it.
@@ -105,8 +91,16 @@ This will return a token that can be used to join other nodes to the swarm. You 
 SWMTKN-1-xxxxxxxx
 ```
 The ouptut may include some additional information including your IP address and the port number of the swarm manager which is `2377`.
-, but the token is the key part, including the `SWMTKN-1-` prefix.
+But the token is the key part, including the `SWMTKN-1-` prefix.
 Ensure to keep it at hand as it will be used to join the worker nodes to the swarm.
+You can also get the token by running the following command:
+```bash
+docker swarm join-token worker
+# or
+docker swarm join-token manager
+```
+This will return the token that can be used to join a worker or manager node to the swarm.
+
 ## Joining a node to the Swarm
 To join a node to the swarm, you need to run the following command on the worker node:
 ```bash
@@ -158,10 +152,62 @@ We can see the labels of a node by inspecting the node. To do this, you can run 
 ## Docker Compose
 So far, I've been using the oficial Spark image to create the containers, but this image is not suitable for a cluster environment as it requires manual configuration of the master and worker nodes, and due to some redundancy in the configuration, it is likely to cause issues in a real-world scenario, as I've been experiencing in the tests.
 For simplicity, I'll be using the Bitnami Spark image, which is a pre-configured image that is prepared to set up a cluster out of the box. The Bitnami Spark image is available on the Docker Hub and can be pulled with the following command:
+
 ```bash
 docker pull bitnami/spark:latest
 ```
+
 Also, I'd like to mention the example provided by Eithan on it's [docker-cluster repo](https://github.com/eithan-hernandez/docker-cluster/tree/main), and I'll be using the same image and similar configurations to set up the Spark cluster.
-To deploy services easily in the Docker Swarm, we can use Docker Compose. Docker Compose is a tool that allows you to define and run multi-container Docker applications using a YAML file. Deploying services individually can be tricky, because you need to specify the network, volumes, and other configurations for each service, and with my current implementations, you require to specify network configurations for each container, including explicit IP addresses, to solve DNS issues, docker-compose will handle this for us, allowing to focus on the services and configurations.
+To deploy services easily in the Docker Swarm, we can use Docker Compose. Docker Compose is a tool that allows you to define and run multi-container Docker applications using a YAML file. 
+
+Deploying services individually can be tricky, because you need to specify the network, volumes, and other configurations for each service, and with my current implementations, you require to specify network configurations for each container, including explicit IP addresses, to solve DNS issues, docker-compose will handle this for us, allowing to focus on the services and configurations.
+
 To use Docker Compose, you need to create a `docker-compose.yml` file in the directory where you want to deploy the services. The file should contain the configurations for the services you want to deploy.
-You can see the content of the compose file in Eithan's repo, but I'll provide a brief explanation of the services and configurations in the file.
+
+You can see the content of the compose file in Eithan's repo, but in the [Docks](Docks) folder you can find a file explaining the commands and files used to set up the cluster.
+
+To deploy services on a Swarm with Docker Compose, you use the command:
+
+```bash
+docker stack deploy -c docker-compose.yml <stack-name>
+```
+
+This command will deploy the services defined in the `docker-compose.yml` file to the Docker Swarm with the specified stack name. You can check the status of the services by running the following command:
+
+```bash
+docker service ls
+```
+
+This will show the services running in the swarm. You can also check the status of the containers by running `docker ps` on the nodes.
+
+# Hadoop
+Hadoop is a distributed storage and processing framework that is commonly used in big data applications. It is composed of several components, including the Hadoop Distributed File System (HDFS), which is a distributed file system that stores data across multiple nodes in a cluster, that we'll be using to store the data processed by the Spark cluster.
+
+To use HDFS is necessary to set up a Hadoop cluster, which is a group of nodes running Hadoop services. The Hadoop cluster consists of a master node that runs the NameNode and ResourceManager services, and one or more worker nodes that run the DataNode and NodeManager services.
+
+Setting up a Hadoop cluster can be complex, as it requires a lot of configuration and tuning to get it working correctly. So it took me a while to get it working, but I finally managed to set up a Hadoop cluster with a master and a worker node using Docker and connecting it to the Spark cluster.
+Further tests are needed to ensure that the Hadoop cluster is resilient and can handle large amounts of data, but for now, it is working correctly and can be used to store data for the Spark cluster. Also, we still need to evaluate the benefits of using HDFS over just using the local filesystem for the Spark cluster.
+
+The actual implementation of the cluster can be found in the [Compose](Docs/docker-compose.yml) file.
+You also need to get the scripts of Hadoop and Spark from the [Docks](Docs/hadoop-config/) folder and the `init-datanode.sh`, `spark-start.sh`, and `start-hdfs.sh` scripts from the Docs folder.
+
+When you try to deploy the services is important to keep in mind the file structure, as the scripts are using relative paths to the files, so you need to keep this structure to avoid issues:
+
+```
+SPARK-HADOOP-PROJECT/
+│
+├── hadoop-config/
+│   ├── core-site.xml
+│   ├── hdfs-site.xml
+├── init-datanode.sh
+├── start-hdfs.sh
+├── spark-start.sh
+├── docker-compose.yml
+```
+You have to run the `stack deploy` command in the same directory as the `docker-compose.yml` file.
+
+You can see the steps to test the Hadoop cluster in the [Instructions](Docs/Execution-steps.md) file.
+
+### Next Steps
+The next steps will be to test the cluster with a larger dataset and more complex applications to evaluate the performance and scalability of the cluster. I'll also be looking into other tools that can be integrated into the cluster, such as Jupyter notebooks, Zeppelin, or performance monitoring tools. Feel free to provide feedback or suggestions for the next steps if you find any issues or have any ideas for improvements.
+
