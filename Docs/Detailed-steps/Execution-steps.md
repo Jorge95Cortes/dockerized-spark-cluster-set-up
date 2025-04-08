@@ -1,6 +1,6 @@
 # Spark-Hadoop Cluster Execution Steps
 
-This guide provides step-by-step instructions for working with your Spark-Hadoop cluster, from initial setup to running a word count example.
+This guide provides step-by-step instructions for working with the Spark-Hadoop cluster, from initial setup to running a word count example.
 
 ## Initial Setup
 

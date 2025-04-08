@@ -17,14 +17,14 @@ docker run hello-world
 If everything is working correctly, you should see a message saying that the installation was successful.
 
 # Spark
-For setting up Spark with Docker, we'll use Docker containers to create a master and worker nodes. For detailed instructions on how to pull the Spark image and run initial tests, see the [Initial Spark Test](Docs/Initial-spark-test.md) documentation.
+For setting up Spark with Docker, we'll use Docker containers to create a master and worker nodes. For detailed instructions on how to pull the Spark image and run initial tests, see the [Initial Spark Test](Docs/Detailed-steps/Initial-spark-test.md) documentation.
 
 Up to this point, we have a working Spark cluster with a master and a worker node running on Docker containers. The next step is to scale the cluster to include more worker nodes and test the performance of the cluster with larger datasets and more complex applications.
 
 # Docker Swarm
 Docker Swarm is a container orchestration tool that allows you to manage a cluster of Docker nodes across multiple machines, as Docker Networks are limited to multiple containers on the same host, but we're looking to multiple containers on multiple hosts.
 
-For detailed instructions on how to set up a Docker Swarm, create overlay networks, and label nodes, please see the [Swarm Explained](Docs/Swarm-explained.md) document.
+For detailed instructions on how to set up a Docker Swarm, create overlay networks, and label nodes, please see the [Swarm Explained](Docs/Detailed-steps/Swarm-explained.md) document.
 
 ## Docker Compose
 To deploy services easily in the Docker Swarm, we can use Docker Compose. Docker Compose is a tool that allows you to define and run multi-container Docker applications using a YAML file. 
@@ -34,7 +34,7 @@ To use Docker Compose, you need to create a `docker-compose.yml` file in the dir
 For detailed commands on working with Docker Compose and Swarm, refer to the [Commands Breakdown](Docs/commands_breakdown.md#docker-composestack-commands) document.
 
 # Hadoop
-Hadoop is a distributed storage and processing framework commonly used in big data applications. For detailed information about Hadoop and HDFS on this project, see the [HDFS Explained](Docs/HDFS-explained.md) document.
+Hadoop is a distributed storage and processing framework commonly used in big data applications. For detailed information about Hadoop and HDFS on this project, see the [HDFS Explained](Docs/Detailed-steps/HDFS-explained.md) document.
 
 # Cluster deployment
 
@@ -127,7 +127,7 @@ After everything is running correctly, you can access the Hadoop and Spark web U
 - Spark Web UI: `http://<master-ip>:8080`
 - Jupyter Lab: `http://<master-ip>:8888/lab`
 
-Follow the steps on the [Execution Steps](Docs/Execution-steps.md) document to perform a really simple test to check if the Hadoop cluster is working correctly.
+Follow the steps on the [Execution Steps](Docs/Detailed-steps/Execution-steps.md) document to perform a really simple test to check if the Hadoop cluster is working correctly.
 
 ## Important Notes
 
