@@ -50,3 +50,41 @@ You will need to check the image's documentation (Or do your own research if not
 docker rm <container-id>
 ```
 
+## Docker Installation
+
+To install Docker on Debian, you can use the following commands:
+
+```bash
+# Update the apt package index and install packages to allow apt to use a repository over HTTPS:
+sudo apt-get update
+sudo apt-get install apt-transport-https ca-certificates curl gnupg lsb-release
+# Add Docker's official GPG key:
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+# Use the following command to set up the stable repository. To add the nightly or test repository, add the word nightly or test (or both) after the word stable in the commands below. Learn about nightly and test channels.
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+# Update the apt package index, and install the latest version of Docker Engine and containerd, or go to the next step to install a specific version:
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io
+```
+
+After installing Docker, you can start the Docker service with the following command:
+```bash
+sudo systemctl start docker
+```
+
+## Docker Compose/Stack Commands
+
+To deploy services on a Swarm with Docker Compose, you use the command:
+
+```bash
+docker stack deploy -c docker-compose.yml <stack-name>
+```
+
+This command will deploy the services defined in the `docker-compose.yml` file to the Docker Swarm with the specified stack name. You can check the status of the services by running the following command:
+
+```bash
+docker service ls
+```
+
+This will show the services running in the swarm. You can also check the status of the containers by running `docker ps` on the nodes.
+

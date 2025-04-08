@@ -65,7 +65,7 @@ services:
       - hadoop_spark_net
 
   spark-master:
-    image: bitnami/spark:latest
+    image: bitnami/spark:3.5.5
     hostname: spark-master
     user: root  # Run Spark as root
     environment:
