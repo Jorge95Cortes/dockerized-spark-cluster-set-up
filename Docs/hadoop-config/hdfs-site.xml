@@ -3,7 +3,7 @@
 <configuration>
     <property>
         <name>dfs.replication</name>
-        <value>2</value>  <!-- Balance between redundancy and space efficiency -->
+        <value>1</value>  <!-- Balance between redundancy and space efficiency -->
     </property>
     <property>
         <name>dfs.namenode.name.dir</name>

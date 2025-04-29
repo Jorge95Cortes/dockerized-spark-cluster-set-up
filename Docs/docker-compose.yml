@@ -96,7 +96,7 @@ services:
       - hadoop_spark_net
 
   spark-worker:
-    image: bitnami/spark:latest
+    image: bitnami/spark:3.5.5
     hostname: "spark-worker-high-{{.Node.Hostname}}"
     environment:
       - SPARK_MODE=worker
@@ -116,6 +116,29 @@ services:
     networks:
       - hadoop_spark_net
 
+  jupyter-notebook:
+    image: jupyter/pyspark-notebook:latest
+    hostname: jupyter-notebook
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - SPARK_HOME=/opt/spark
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/home/jovyan/work
+    configs:
+      - source: core_site_config
+        target: /opt/hadoop/etc/hadoop/core-site.xml
+      - source: hdfs_site_config
+        target: /opt/hadoop/etc/hadoop/hdfs-site.xml
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == manager
+    networks:
+      - hadoop_spark_net
 
 networks:
   hadoop_spark_net:
