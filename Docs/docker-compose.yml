@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   namenode:
-    image: apache/hadoop:3.4.1
+    image: <registry-host-ip>:5000/apache/hadoop:3.4.1
     hostname: namenode
     user: root
     environment:
@@ -32,7 +32,7 @@ services:
       - hadoop_spark_net
 
   datanode:
-    image: apache/hadoop:3.4.1
+    image: <registry-host-ip>:5000/apache/hadoop:3.4.1
     hostname: "datanode-high-{{.Node.Hostname}}"
     user: root
     environment:
@@ -65,9 +65,9 @@ services:
       - hadoop_spark_net
 
   spark-master:
-    image: bitnami/spark:3.5.5
+    image: <registry-host-ip>:5000/bitnami/spark:3.5.5
     hostname: spark-master
-    user: root  # Run Spark as root
+    user: root
     environment:
       - SPARK_MODE=master
       - SPARK_MASTER_HOST=spark-master
@@ -88,15 +88,16 @@ services:
         target: /opt/bitnami/scripts/spark-start.sh
         mode: 0755
     deploy:
-      mode: global
+      mode: replicated 
+      replicas: 1      
       placement:
         constraints:
-          - node.labels.spark-role == master
+          - node.role == manager 
     networks:
       - hadoop_spark_net
 
   spark-worker:
-    image: bitnami/spark:3.5.5
+    image: <registry-host-ip>:5000/bitnami/spark:3.5.5 
     hostname: "spark-worker-high-{{.Node.Hostname}}"
     environment:
       - SPARK_MODE=worker
@@ -117,7 +118,7 @@ services:
       - hadoop_spark_net
 
   jupyter-notebook:
-    image: jupyter/pyspark-notebook:latest
+    image: <registry-host-ip>:5000/jupyter/pyspark-notebook:latest 
     hostname: jupyter-notebook
     environment:
       - JUPYTER_ENABLE_LAB=yes
@@ -133,10 +134,11 @@ services:
       - source: hdfs_site_config
         target: /opt/hadoop/etc/hadoop/hdfs-site.xml
     deploy:
-      mode: global
+      mode: replicated 
+      replicas: 1      
       placement:
         constraints:
-          - node.role == manager
+          - node.role == manager 
     networks:
       - hadoop_spark_net
 
