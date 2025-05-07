@@ -174,3 +174,35 @@ DEPLOYMENT-DIRECTORY/                      # Any directory on the swarm manager
 
 You have to run the `stack deploy` command in the same directory as the `docker-compose.yml` file.
 
+## Local Deployment (Ignore if not using VM's)
+
+When running Docker offline, a critical issue arises, attempting to deploy a stack causes Docker Swarm to try pulling the required images from Docker Hub. In an offline environment, this fails because the registries are unreachable, causing the deployment to halt with 'image not found' errors, even if the images exist locally on the nodes.
+
+To solve this, we must set up a local Docker registry accessible by all nodes in the Swarm. This registry will host the necessary images. Follow these steps on the manager node:
+
+```bash
+# 1. Deploy the registry service
+docker service create --name registry --publish published=5000,target=5000 registry:2
+
+
+# Example for Spark
+docker tag bitnami/spark:3.5.5 <registry-host-ip>:5000/bitnami/spark:3.5.5
+docker push <registry-host-ip>:5000/bitnami/spark:3.5.5
+
+# Example for Hadoop
+docker tag apache/hadoop:3.4.1 192.168.56.2:5000/apache/hadoop:3.4.1
+docker push 192.168.56.2:5000/apache/hadoop:3.4.1
+
+# Example for Jupyter
+docker tag jupyter/pyspark-notebook:latest 192.168.56.2:5000/jupyter/pyspark-notebook:latest
+docker push 192.168.56.2:5000/jupyter/pyspark-notebook:latest
+
+```
+Create the next file to allow the local registry on each node, included the manager
+
+```bash
+// filepath: /etc/docker/daemon.json
+{
+  "insecure-registries" : ["<registry-host-ip>:5000"]
+}
+```
