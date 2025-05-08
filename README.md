@@ -174,6 +174,15 @@ DEPLOYMENT-DIRECTORY/                      # Any directory on the swarm manager
 
 You have to run the `stack deploy` command in the same directory as the `docker-compose.yml` file.
 
+If you have successfully deployed the services, you should be able to see the Hadoop and Spark web UIs by going to the following URLs in your web browser:
+- Hadoop Web UI: `http://<master-ip>:9870`
+- Spark Web UI: `http://<master-ip>:8080`
+- Jupyter Lab: `http://<master-ip>:8888/lab`
+
+Here, you will see something like this:
+![Hadoop Web UI](assets/HadoopS-cluster.png)
+![Spark Web UI](assets/SparkH-cluster.png)
+
 ## Local Deployment (Ignore if not using VM's)
 
 When running Docker offline, a critical issue arises, attempting to deploy a stack causes Docker Swarm to try pulling the required images from Docker Hub. In an offline environment, this fails because the registries are unreachable, causing the deployment to halt with 'image not found' errors, even if the images exist locally on the nodes.

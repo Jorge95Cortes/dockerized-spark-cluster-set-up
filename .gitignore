@@ -2,5 +2,6 @@
 **/.ipynb_checkpoints
 **/.ps1
 Docs/Logs/
+Docs/Data_files/*.csv
 AI_context
 Error_logs

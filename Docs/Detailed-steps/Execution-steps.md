@@ -94,3 +94,12 @@ You can view the results by going back to the namenode container and checking th
 # In the namenode container
 hdfs dfs -ls /test/word-count-output
 hdfs dfs -cat /test/word-count-output/part-*.csv
+```
+```bash
+# In case that jupyter fails miserably, temporal solution
+docker cp "file_route" $(docker ps -q --filter name=namenode):/tmp/ibm_card_txn.csv
+docker exec -it $(docker ps -q --filter name=namenode) bash
+hdfs dfs -mkdir -p /user/jovyan
+hdfs dfs -put /tmp/ibm_card_txn.csv /user/jovyan/ibm_card_txn.csv
+hdfs dfs -ls /user/jovyan
+hdfs dfs -cat /user/jovyan/ibm_card_txn.csv | head

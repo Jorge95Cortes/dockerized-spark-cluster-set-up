@@ -103,6 +103,9 @@ services:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+      - SPARK_WORKER_WEBUI_PORT=8081
+    ports:
+      - "8081:8081"
     configs:
       - source: core_site_config
         target: /opt/hadoop/etc/hadoop/core-site.xml
