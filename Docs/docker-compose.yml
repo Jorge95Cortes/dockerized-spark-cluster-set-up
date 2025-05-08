@@ -125,7 +125,7 @@ services:
     hostname: jupyter-notebook
     environment:
       - JUPYTER_ENABLE_LAB=yes
-      - SPARK_HOME=/opt/spark
+      - SPARK_HOME=/usr/local/spark
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
       - JUPYTER_TOKEN=sparkcluster
     ports:

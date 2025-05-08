@@ -51,7 +51,8 @@ hdfs dfs -cat /test/test.txt
 docker ps | grep spark-master
 
 # Connect to the Spark master container
-docker exec -it <spark-master-container-id> bash
+docker exec -it $(docker ps -q --filter name=spark-master) bash
+
 
 # Inside the container, ensure Spark is running
 /opt/bitnami/scripts/spark-start.sh
@@ -95,6 +96,9 @@ You can view the results by going back to the namenode container and checking th
 hdfs dfs -ls /test/word-count-output
 hdfs dfs -cat /test/word-count-output/part-*.csv
 ```
+
+## Aditional tests
+
 ```bash
 # In case that jupyter fails miserably, temporal solution
 docker cp "file_route" $(docker ps -q --filter name=namenode):/tmp/ibm_card_txn.csv
@@ -102,4 +106,30 @@ docker exec -it $(docker ps -q --filter name=namenode) bash
 hdfs dfs -mkdir -p /user/jovyan
 hdfs dfs -put /tmp/ibm_card_txn.csv /user/jovyan/ibm_card_txn.csv
 hdfs dfs -ls /user/jovyan
-hdfs dfs -cat /user/jovyan/ibm_card_txn.csv | head
+docker exec -it $(docker ps -q --filter name=jupyter-notebook) bash
+ls /usr/local/
+# Look for a spark directory
+exit
+```
+
+```bash
+# On your host machine (not inside a container)
+NAMENODE_CONTAINER_ID=$(docker ps -q --filter name=namenode)
+docker cp /home/grecal/Documents/PPC/Spark-Project/dockerized-spark-cluster-set-up/Docs/Data_files $NAMENODE_CONTAINER_ID:/tmp/ibm_card_tnx_data
+# On your host machine
+docker exec -it $NAMENODE_CONTAINER_ID bash
+# Inside the namenode container's shell
+hdfs dfs -mkdir -p hdfs://namenode:9000/test_bd
+hdfs dfs -put /tmp/ibm_card_tnx_data/* hdfs://namenode:9000/test_bd/
+# Inside the namenode container's shell
+hdfs dfs -ls hdfs://namenode:9000/test_bd/
+exit
+
+docker ps | grep spark-master
+# On your host machine
+docker cp /home/grecal/Documents/PPC/Spark-Project/dockerized-spark-cluster-set-up/Docs/Test_scripts/test.py spark-master:/tmp/test.py
+# Connect to the Spark master container
+docker exec -it spark-master bash
+
+# Inside the container, run the script
+spark-submit /tmp/test.py
