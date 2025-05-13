@@ -5,3 +5,4 @@ Docs/Logs/
 Docs/Data_files/*.csv
 AI_context
 Error_logs
+node_tiers.env
