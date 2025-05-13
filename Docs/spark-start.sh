@@ -5,7 +5,7 @@ CONTAINER_IP=$(hostname -i)
 echo "Container IP: $CONTAINER_IP"
 
 # Start Spark shell with proper networking
-exec spark-shell --master spark://spark-master:7077 \
+exec pyspark --master spark://spark-master:7077 \
   --conf "spark.driver.host=$CONTAINER_IP" \
   --conf "spark.driver.bindAddress=0.0.0.0" \
   --conf "spark.executor.memory=1g" \

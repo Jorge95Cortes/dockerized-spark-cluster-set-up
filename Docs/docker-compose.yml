@@ -28,21 +28,27 @@ services:
       placement:
         constraints:
           - node.role == manager
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9870"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - hadoop_spark_net
 
-  datanode:
+  datanode-high:
     image: apache/hadoop:3.4.1
     hostname: "datanode-high-{{.Node.Hostname}}"
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
       - NODE_HOSTNAME={{.Node.Hostname}}
-#      - HADOOP_DATANODE_OPTS=-Xmx6g -XX:+UseG1GC
+#      - HADOOP_DATANODE_OPTS=-Xmx6g -XX:+UseG1GC # Consider tuning based on high-perf node RAM
       - NODE_PROFILE=high
     volumes:
       - type: bind
-        source: /data/hadoop
+        source: /data/hadoop # Ensure this path exists on target nodes
         target: /opt/hadoop/data/dataNode
     configs:
       - source: core_site_config
@@ -57,10 +63,79 @@ services:
     command: ["/bin/bash", "/init-datanode.sh"]
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 2 # For the 2 high-performance nodes
       placement:
         constraints:
           - node.labels.h-role == worker
+          - node.labels.performance == high
+    networks:
+      - hadoop_spark_net
+
+  datanode-mid:
+    image: apache/hadoop:3.4.1
+    hostname: "datanode-mid-{{.Node.Hostname}}"
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - NODE_HOSTNAME={{.Node.Hostname}}
+#      - HADOOP_DATANODE_OPTS=-Xmx4g -XX:+UseG1GC # Consider tuning based on mid-perf node RAM
+      - NODE_PROFILE=mid
+    volumes:
+      - type: bind
+        source: /data/hadoop # Ensure this path exists on target nodes
+        target: /opt/hadoop/data/dataNode
+    configs:
+      - source: core_site_config
+        target: /opt/hadoop/etc/hadoop/core-site.xml
+      - source: hdfs_site_config
+        target: /opt/hadoop/etc/hadoop/hdfs-site.xml
+      - source: datanode_script
+        target: /init-datanode.sh
+        mode: 0755
+    depends_on:
+      - namenode
+    command: ["/bin/bash", "/init-datanode.sh"]
+    deploy:
+      mode: replicated
+      replicas: 1 # For the 1 mid-performance node
+      placement:
+        constraints:
+          - node.labels.h-role == worker
+          - node.labels.performance == mid
+    networks:
+      - hadoop_spark_net
+
+  datanode-low:
+    image: apache/hadoop:3.4.1
+    hostname: "datanode-low-{{.Node.Hostname}}"
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - NODE_HOSTNAME={{.Node.Hostname}}
+#      - HADOOP_DATANODE_OPTS=-Xmx2g -XX:+UseG1GC # Consider tuning based on low-perf node RAM
+      - NODE_PROFILE=low
+    volumes:
+      - type: bind
+        source: /data/hadoop # Ensure this path exists on target nodes
+        target: /opt/hadoop/data/dataNode
+    configs:
+      - source: core_site_config
+        target: /opt/hadoop/etc/hadoop/core-site.xml
+      - source: hdfs_site_config
+        target: /opt/hadoop/etc/hadoop/hdfs-site.xml
+      - source: datanode_script
+        target: /init-datanode.sh
+        mode: 0755
+    depends_on:
+      - namenode
+    command: ["/bin/bash", "/init-datanode.sh"]
+    deploy:
+      mode: replicated
+      replicas: 1 # For the 1 low-performance node
+      placement:
+        constraints:
+          - node.labels.h-role == worker
+          - node.labels.performance == low
     networks:
       - hadoop_spark_net
 
@@ -84,28 +159,27 @@ services:
         target: /opt/hadoop/etc/hadoop/core-site.xml
       - source: hdfs_site_config
         target: /opt/hadoop/etc/hadoop/hdfs-site.xml
-      - source: spark_start_script
-        target: /opt/bitnami/scripts/spark-start.sh
-        mode: 0755
     deploy:
       mode: replicated 
       replicas: 1      
       placement:
         constraints:
-          - node.role == manager 
+          - node.labels.spark-role == master
     networks:
       - hadoop_spark_net
 
-  spark-worker:
-    image: bitnami/spark:3.5.5 
+  spark-worker-high:
+    image: bitnami/spark:3.5.5
     hostname: "spark-worker-high-{{.Node.Hostname}}"
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
       - SPARK_WORKER_WEBUI_PORT=8081
+      - SPARK_WORKER_CORES=10
+      - SPARK_WORKER_MEMORY=12G
     ports:
-      - "8081:8081"
+      - "8081:8081" # This port will be mapped on each node running a high-perf worker
     configs:
       - source: core_site_config
         target: /opt/hadoop/etc/hadoop/core-site.xml
@@ -113,10 +187,38 @@ services:
         target: /opt/hadoop/etc/hadoop/hdfs-site.xml
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 2 # For the 2 high-performance nodes
       placement:
         constraints:
           - node.labels.spark-role == worker
+          - node.labels.performance == high
+    networks:
+      - hadoop_spark_net
+
+  spark-worker-mid:
+    image: bitnami/spark:3.5.5
+    hostname: "spark-worker-mid-{{.Node.Hostname}}"
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+      - SPARK_WORKER_WEBUI_PORT=8082 # Using a different port for potential UI access if needed, though typically not accessed directly per worker often.
+      - SPARK_WORKER_CORES=6
+      - SPARK_WORKER_MEMORY=5G
+    ports:
+      - "8082:8082" # Exposing on a different host port to avoid conflict if multiple worker types were on same node (not the case here due to placement)
+    configs:
+      - source: core_site_config
+        target: /opt/hadoop/etc/hadoop/core-site.xml
+      - source: hdfs_site_config
+        target: /opt/hadoop/etc/hadoop/hdfs-site.xml
+    deploy:
+      mode: replicated
+      replicas: 1 # For the 1 mid-performance node
+      placement:
+        constraints:
+          - node.labels.spark-role == worker
+          - node.labels.performance == mid
     networks:
       - hadoop_spark_net
 
@@ -163,5 +265,3 @@ configs:
     file: ./start-hdfs.sh
   datanode_script:
     file: ./init-datanode.sh
-  spark_start_script:
-    file: ./spark-start.sh
