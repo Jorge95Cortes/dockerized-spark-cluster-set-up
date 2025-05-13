@@ -181,9 +181,4 @@ docker cp /home/grecal/Documents/PPC/Spark-Project/dockerized-spark-cluster-set-
 docker exec -it spark-master bash
 
 # Inside the container, run the script
-<<<<<<< HEAD
 spark-submit /tmp/test.py
-=======
-spark-submit /tmp/test.py
-```
->>>>>>> 22a2d8c (This commit includes an automatic labelling script, it also asign resources explicitly to each node on the cluster)
